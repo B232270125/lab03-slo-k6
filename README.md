@@ -128,3 +128,27 @@ k6 exit code = 99 (threshold зөрчигдсөн).
 ### Тэмдэглэл
 
 Connection refused хүсэлт 0 мс-д буцдаг (`min=0s`) тул latency percentile зогсолтод арай сайн харагддаг. Performance SLO-ийн PASS нь үүнээс ч хамаарсан.
+
+## Алхам 6: Threshold-оо зориуд эвдэх
+
+`slo-test-fail.js` нь `slo-test.js`-ээс хоёр threshold-оороо ялгаатай:
+
+| Threshold | `slo-test.js` | `slo-test-fail.js` |
+|---|---|---|
+| `http_req_duration{name:report}` | `p(95)<450` | `p(95)<100` |
+| `http_req_duration{name:cart}` | `p(95)<20`, `p(99)<50` | `p(95)<50`, `p(99)<50` |
+
+Үлдсэн threshold (`/pay` error rate < 8%, `checks` > 90%) өөрчлөгдөөгүй. Бүтэн гаралт: `results/fail.txt`.
+
+| Threshold | Бодит | Төлөв |
+|---|---|---|
+| `/report` p(95) < 100 мс | 391.88 мс | FAIL |
+| `/cart/add` p(95) < 50 мс | 822.89 µs | PASS |
+| `/cart/add` p(99) < 50 мс | 2.74 мс | PASS |
+| `/pay` error rate < 8% | 4.71% | PASS |
+| `checks` > 90% | 98.42% | PASS |
+
+- FAIL-ийг харуулж буй мөр: `✗ 'p(95)<100' p(95)=391.88ms`, мөн төгсгөлд `thresholds on metrics 'http_req_duration{name:report}' have been crossed`.
+- k6 exit code = **99**. CI pipeline энэ код 0 биш байхыг хараад build-ийг зогсооно.
+- `/report` нь 200-400 мс санамсаргүй унтдаг тул 100 мс-ийн босго ямар ч машин дээр найдвартай FAIL болно.
+- `/cart/add` p(95)<50 нь localhost дээр PASS хэвээр. Бодит p95 нь ойролцоогоор 0.8 мс тул 50 мс нь бодит утгаас ~60 дахин сул, ямар ч мэдээлэл өгөхгүй босго болно. Энэ нь baseline-ийн дүгнэлттэй нийцнэ.
